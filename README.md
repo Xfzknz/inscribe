@@ -65,10 +65,10 @@
 
 ## 链接
 
-- GitHub：待补充
+- GitHub：https://github.com/Xfzknz/inscribe
 - Modrinth：待补充
 - CurseForge：待补充
-- 问题反馈：待补充
+- 问题反馈：https://github.com/Xfzknz/inscribe/issues
 
 ## 反馈
 
@@ -147,10 +147,10 @@ You may include this mod in modpacks **with credit to the author and the mod nam
 
 ## Links
 
-- GitHub: to be added
+- GitHub: https://github.com/Xfzknz/inscribe
 - Modrinth: to be added
 - CurseForge: to be added
-- Issue tracker: to be added
+- Issue tracker: https://github.com/Xfzknz/inscribe/issues
 
 ## Feedback
 
