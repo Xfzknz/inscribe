@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "top": "inscribe:block/lava_shell_top_1",
+    "side": "inscribe:block/lava_shell_side_1",
+    "bottom": "inscribe:block/lava_shell_side_1"
+  }
+}

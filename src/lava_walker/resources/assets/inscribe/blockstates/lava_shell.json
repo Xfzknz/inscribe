@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "stage=0": {
+      "model": "inscribe:block/lava_shell"
+    },
+    "stage=1": {
+      "model": "inscribe:block/lava_shell_1"
+    },
+    "stage=2": {
+      "model": "inscribe:block/lava_shell_2"
+    }
+  }
+}

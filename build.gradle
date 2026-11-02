@@ -1,0 +1,155 @@
+buildscript {
+    repositories {
+        maven { url = 'http://127.0.0.1:8765/forge/' }
+        maven { url = 'http://127.0.0.1:8765/central/' }
+        maven { url = 'http://127.0.0.1:8765/mojang/' }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:6.+'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+def enabledModules = (findProperty('modules') ?: 'outreach,double_jump,thunderstrike,swift_strike,sunder,life_siphon,lava_walker,immolation,giant_slayer,unscathed,frost_thorns,beheading,hunt').toString()
+        .split(',')
+        .collect { it.trim() }
+        .findAll { !it.isEmpty() }
+def knownModules = ['outreach', 'double_jump', 'thunderstrike', 'swift_strike', 'sunder', 'life_siphon', 'lava_walker', 'immolation', 'giant_slayer', 'unscathed', 'frost_thorns', 'beheading', 'hunt']
+def unknownModules = enabledModules.findAll { !knownModules.contains(it) }
+if (enabledModules.isEmpty() || !unknownModules.isEmpty()) {
+    throw new GradleException("Invalid -Pmodules=${enabledModules}; known modules: ${knownModules}")
+}
+logger.lifecycle("Inscribe modules: ${enabledModules}")
+
+def moduleClasses = [
+        outreach     : 'com.hekaijun.inscribe.enchantment.outreach.OutreachModule',
+        double_jump  : 'com.hekaijun.inscribe.enchantment.doublejump.DoubleJumpModule',
+        thunderstrike: 'com.hekaijun.inscribe.enchantment.thunderstrike.ThunderstrikeModule',
+        swift_strike : 'com.hekaijun.inscribe.enchantment.swiftstrike.SwiftStrikeModule',
+        sunder       : 'com.hekaijun.inscribe.enchantment.sunder.SunderModule',
+        life_siphon  : 'com.hekaijun.inscribe.enchantment.lifesiphon.LifeSiphonModule',
+        lava_walker  : 'com.hekaijun.inscribe.enchantment.lavawalker.LavaWalkerModule',
+        immolation   : 'com.hekaijun.inscribe.enchantment.immolation.ImmolationModule',
+        giant_slayer : 'com.hekaijun.inscribe.enchantment.giantslayer.GiantSlayerModule',
+        unscathed    : 'com.hekaijun.inscribe.enchantment.unscathed.UnscathedModule',
+        frost_thorns : 'com.hekaijun.inscribe.enchantment.frostthorns.FrostThornsModule',
+        beheading    : 'com.hekaijun.inscribe.enchantment.beheading.BeheadingModule',
+        hunt         : 'com.hekaijun.inscribe.enchantment.hunt.HuntModule',
+]
+def generatedModuleServices = layout.buildDirectory.dir('generated/module-services')
+def generateModuleService = tasks.register('generateModuleService') {
+    inputs.property('modules', enabledModules.join(','))
+    outputs.dir(generatedModuleServices)
+    doLast {
+        def serviceFile = generatedModuleServices.get()
+                .file('META-INF/services/com.hekaijun.inscribe.core.InscribeModule').asFile
+        serviceFile.parentFile.mkdirs()
+        serviceFile.text = enabledModules.collect { moduleClasses[it] }.join('\n') + '\n'
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            enabledModules.each { srcDir "src/${it}/java" }
+        }
+        resources {
+            enabledModules.each { srcDir "src/${it}/resources" }
+            srcDir generatedModuleServices
+        }
+    }
+}
+
+tasks.named('processResources').configure {
+    dependsOn generateModuleService
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+        }
+
+        server {
+            args '--nogui'
+        }
+    }
+}
+
+// ForgeGradle adds the official repositories itself; drop them and force everything
+// through the local mirror (see docs/COMMANDS.md).
+repositories {
+    clear()
+    maven { url = 'http://127.0.0.1:8765/forge/' }
+    maven { url = 'http://127.0.0.1:8765/central/' }
+    maven { url = 'http://127.0.0.1:8765/mojang/' }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            forge_version          : forge_version,
+            forge_version_range    : forge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+    options.compilerArgs += ['-Xlint:deprecation']
+}
